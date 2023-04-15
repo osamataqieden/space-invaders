@@ -19,12 +19,38 @@ const gameObjectMetadata = {
     enemy: {
         width: 20,
         height: 20,
-        color: "purple"
+        color: {
+            full: "purple",
+            half: "yellow",
+            low: "red"
+        }
     }
 }
+const healthEnum = {
+    full: "full",
+    half: "half",
+    low: "low",
+    dead: "dead"
+}
 let canvasManager = (() => {
-    const PLAYER_WIDTH = 20;
-    const PLAYER_HEIGHT = 20;
+    const healthBarPos = {
+        x: 60,
+        y: 30
+    };
+    const enemyCounterPos = {
+        x: CANVAS_WIDTH - 120,
+        y: 30
+    };
+    let drawPlayerData = (numOfEnemies, playerHealth) => {
+        let canvas = document.getElementById("canvas");
+        let ctx = canvas.getContext("2d");
+        if(ctx){
+            ctx.fillStyle = "white";
+            ctx.fillText("HP: " + playerHealth, healthBarPos.x, healthBarPos.y);
+            ctx.fillStyle = "white";
+            ctx.fillText("Enemies: " + numOfEnemies, enemyCounterPos.x, enemyCounterPos.y);
+        }
+    }
     let initCanvas = () => {
         let canvas = document.getElementById('canvas');
         let ctx = canvas.getContext('2d');
@@ -35,7 +61,6 @@ let canvasManager = (() => {
         }
         return false;
     }
-
     let drawGameObjects = (gameObjects) => {
         let canvas = document.getElementById("canvas");
         let ctx = canvas.getContext("2d");
@@ -53,7 +78,7 @@ let canvasManager = (() => {
                         break;
                     }
                     case gameObjectEnums.enemy: {
-                        ctx.fillStyle = gameObjectMetadata.enemy.color;
+                        ctx.fillStyle = gameObjectMetadata.enemy.color[element.health];
                         ctx.fillRect(element.x, element.y, gameObjectMetadata.enemy.width, gameObjectMetadata.enemy.height);
                         break;
                     }
@@ -61,65 +86,85 @@ let canvasManager = (() => {
             });
         }
     }
-
     return {
         initCanvas: initCanvas,
-        drawGameObjects: drawGameObjects
+        drawGameObjects: drawGameObjects,
+        drawPlayerData: drawPlayerData
     }
 })();
 let gameManager = (() => {
-
     let playerPos = {
         x: CANVAS_WIDTH / 2,
         y: CANVAS_HEIGHT - 50,
-        objectType: gameObjectEnums.player
+        objectType: gameObjectEnums.player,
+        health: healthEnum.full
     };
     let gameObjects = [playerPos]
-    let currentCommand = "NA";
+    let currentMovementCommand = "NA";
+    let currentShotCommand = "NA";
+    let currentEnemyCount = 0;
+    let prevKey = "NA";
+    let stopMovementFlag = false;
 
     let addRandomEnemies = () => {
         let enemyContainerX = 60;
         let enemyContainerY = 100;
-        for(var i = 1; i<= 30; i++){
+        for(var i = 1; i<= 20; i++){
             let enemy = {
                 x: enemyContainerX + (i % 10) * 2 * gameObjectMetadata.enemy.width ,
                 y: enemyContainerY,
-                objectType: gameObjectEnums.enemy
+                objectType: gameObjectEnums.enemy,
+                health: healthEnum.full
             }
             gameObjects.push(enemy);
             if(i % 10 == 0){
                 enemyContainerY += gameObjectMetadata.enemy.height + 2;
             }
+            currentEnemyCount++;
         }
     }
 
     window.addEventListener("keydown", (event) => {
+        console.log(event);
         if(event.key == "ArrowUp"){
-            currentCommand = "up";
+            currentMovementCommand = "up";
+            prevKey = event.key;
         }
         else if(event.key == "ArrowLeft"){
-            currentCommand = "left";
+            currentMovementCommand = "left";
+            prevKey = event.key;
         }
         else if(event.key == "ArrowRight"){
-            currentCommand = "right";
+            currentMovementCommand = "right";
+            prevKey = event.key;
         }
         else if(event.key == "ArrowDown"){
-            currentCommand = "down";
+            currentMovementCommand = "down";
+            prevKey = event.key;
         }
-        else if(event.code == "Space"){
-            currentCommand = "shoot";
+        if(event.code == "Space"){
+            currentShotCommand = "shoot";
         }
     });
 
+    window.addEventListener("keyup", (event) => {
+        console.log(event);
+        if(event.key == "ArrowLeft" || event.key == "ArrowRight" || event.key == "ArrowDown" || event.key == "ArrowUp"){
+            if(prevKey == event.key)
+                currentMovementCommand = "NA";
+        } 
+    });
+
     let gameLoop = () => {
-        if(currentCommand == "shoot"){
+        if(currentShotCommand == "shoot"){
             let playerObject = gameObjects.find((element) => {
                 return element.objectType == gameObjectEnums.player;
             });
             let shot = {
                 x: playerObject.x + gameObjectMetadata.player.width / 2,
                 y: playerObject.y - 30,
-                objectType: gameObjectEnums.shot
+                objectType: gameObjectEnums.shot,
+                health: "N/A"
             };
             gameObjects.push(shot);
             let shotAudio = new Audio("./media/audio/laser.wav");
@@ -130,48 +175,68 @@ let gameManager = (() => {
                 element.y -= 10  
             }
             else if(element.objectType == gameObjectEnums.player){
-                if(currentCommand == "up"){
+                if(currentMovementCommand == "up"){
                     element.y -= 10;
                 }
-                else if(currentCommand == "left"){
+                else if(currentMovementCommand == "left"){
                     element.x -= 10;
                 }
-                else if(currentCommand == "right"){
+                else if(currentMovementCommand == "right"){
                     element.x += 10;
                 }
-                else if(currentCommand == "down"){
+                else if(currentMovementCommand == "down"){
                     element.y += 10;
                 }        
             }
         });
         gameObjects.forEach((element) => {
             if(element.objectType == gameObjectEnums.enemy){
-                let collideElement = gameObjects.find((el) => {
+                let collideElements = gameObjects.filter((el) => {
                     return el.objectType == gameObjectEnums.shot &&
                         (el.y <= (element.y + gameObjectMetadata.enemy.height) && el.y >= element.y)
                         && (el.x >= element.x && el.x <= (element.x + gameObjectMetadata.enemy.width));         
                 });
-                if(collideElement){
-                    gameObjects = gameObjects.filter((el) => {
-                        return el != element && el != collideElement;
+                if(collideElements){
+                    let elementsToRemove = [];
+                    collideElements.forEach((col) => {
+                        if(col.objectType != gameObjectEnums.shot){
+                            return;
+                        }
+                        let deathAudio = new Audio("./media/audio/echosplosion.wav");
+                        deathAudio.play();
+                        if(element.health == healthEnum.full){
+                            element.health = healthEnum.half;
+                        }
+                        else if(element.health == healthEnum.half){
+                            element.health = healthEnum.low;
+                        }
+                        else if(element.health == healthEnum.low){
+                            elementsToRemove.push(element);
+                            currentEnemyCount--;
+                            element.health = healthEnum.dead;
+                        }
+                        elementsToRemove.push(col);
                     });
-                    let deathAudio = new Audio("./media/audio/echosplosion.wav");
-                    deathAudio.play();
+                    gameObjects = gameObjects.filter((el) => {
+                        return !elementsToRemove.includes(el);  
+                    });
                 }
             }
         });
+        let healthText = "100%";
         canvasManager.initCanvas();
+        canvasManager.drawPlayerData(currentEnemyCount, healthText);
         canvasManager.drawGameObjects(gameObjects);
-        currentCommand = "NA";
+        currentShotCommand = "NA";
+        window.requestAnimationFrame(gameLoop);
     }
 
     let initGame = () => {
         canvasManager.initCanvas();
         addRandomEnemies();
+        canvasManager.drawPlayerData(currentEnemyCount, "100%");
         canvasManager.drawGameObjects(gameObjects);
-        setInterval(() => {
-            gameLoop();
-        }, 25);
+        window.requestAnimationFrame(gameLoop);
     }
 
     return {
