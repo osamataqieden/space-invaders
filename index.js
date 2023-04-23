@@ -33,7 +33,7 @@ const ASSESTS_MAP = [
         image: new Image()
     },
     {
-        name:"enemy.image.health.half",
+        name: "enemy.image.health.half",
         link: "./assests/imgs/enemyAircraftHitRed.png",
         image: new Image()
     },
@@ -114,7 +114,7 @@ let canvasManager = (() => {
     let drawPlayerData = (numOfEnemies, playerHealth) => {
         let canvas = document.getElementById("canvas");
         let ctx = canvas.getContext("2d");
-        if(ctx){
+        if (ctx) {
             ctx.fillStyle = "red";
             ctx.fillText("HP: " + playerHealth, healthBarPos.x, healthBarPos.y);
             ctx.fillStyle = "red";
@@ -124,19 +124,19 @@ let canvasManager = (() => {
     let initCanvas = () => {
         let canvas = document.getElementById('canvas');
         let ctx = canvas.getContext('2d');
-        if(ctx){
+        if (ctx) {
             ctx.fillStyle = "black";
-            ctx.fillRect(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
-            return true;    
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            return true;
         }
         return false;
     }
     let drawGameObjects = (gameObjects) => {
         let canvas = document.getElementById("canvas");
         let ctx = canvas.getContext("2d");
-        if(ctx){
+        if (ctx) {
             gameObjects.forEach(element => {
-                switch(element.objectType){
+                switch (element.objectType) {
                     case gameObjectEnums.player: {
                         let currentImage = ASSESTS_MAP.find((el) => {
                             return el.name == gameObjectMetadata.player.images[element.health];
@@ -189,6 +189,7 @@ let gameManager = (() => {
     let currentShotCommand = "NA";
     let prevKey = "NA";
 
+    let spawningEnemyCount = 0;
     let currentEnemyCount = 0;
     let shotInternvalCounter = 20;
     let shotInternvalResetValue = 20;
@@ -202,11 +203,11 @@ let gameManager = (() => {
     let numOfEnemiesOnBoard = 0;
 
     let enemiesHandler = () => {
-        if(shouldSpawn){
-        if(isSpawning){
+        if (shouldSpawn) {
+            if (isSpawning) {
                 gameObjects.forEach((element) => {
-                    if(element.objectType == gameObjectEnums.enemy && element.dynamicValues?.isSpawning == true){
-                        if(element.x + 20 >= xSpawningBoundery){
+                    if (element.objectType == gameObjectEnums.enemy && element.dynamicValues?.isSpawning == true) {
+                        if (element.x + 20 >= xSpawningBoundery) {
                             isSpawning = false;
                         }
                         else {
@@ -214,40 +215,41 @@ let gameManager = (() => {
                         }
                     }
                 });
-                if(isSpawning == false){
+                if (isSpawning == false) {
                     gameObjects.forEach((element) => {
-                        if(element.objectType == gameObjectEnums.enemy && element.dynamicValues?.isSpawning == true){
+                        if (element.objectType == gameObjectEnums.enemy && element.dynamicValues?.isSpawning == true) {
                             element.dynamicValues.isSpawning = false;
                             currentEnemyCount++;
                         }
                     });
                     ticksSinceLastSpawn = 0;
-                }    
-        }
-        else if(ticksSinceLastSpawn == 0){
-            for(var i = 0;i< numOfEnemiesPerRow; i++) {
-                let enemy = {
-                    x: (-1 * (gameObjectMetadata.enemy.width * 2 + 2 * i * gameObjectMetadata.enemy.width)) ,
-                    y: ySpawningPosition,
-                    objectType: gameObjectEnums.enemy,
-                    health: healthEnum.full,
-                    dynamicValues: {
-                        isSpawning: true
-                    }
-                };
-                gameObjects.push(enemy);
+                }
             }
-            isSpawning = true;
-            ticksSinceLastSpawn = 60;
+            else if (ticksSinceLastSpawn == 0) {
+                for (var i = 0; i < numOfEnemiesPerRow; i++) {
+                    let enemy = {
+                        x: (-1 * (gameObjectMetadata.enemy.width * 2 + 2 * i * gameObjectMetadata.enemy.width)),
+                        y: ySpawningPosition,
+                        objectType: gameObjectEnums.enemy,
+                        health: healthEnum.full,
+                        dynamicValues: {
+                            isSpawning: true
+                        }
+                    };
+                    spawningEnemyCount++;
+                    gameObjects.push(enemy);
+                }
+                isSpawning = true;
+                ticksSinceLastSpawn = 60;
+            }
+            else {
+                ticksSinceLastSpawn--;
+            }
         }
-        else {
-            ticksSinceLastSpawn--;
-        }        
-        }
-        if(currentEnemyCount != 0){
-            if(ticksSinceMovement == 0){
+        if (currentEnemyCount != 0) {
+            if (ticksSinceMovement == 0) {
                 gameObjects.forEach((element) => {
-                    if(element.objectType == gameObjectEnums.enemy && element.dynamicValues?.isSpawning == false){
+                    if (element.objectType == gameObjectEnums.enemy && element.dynamicValues?.isSpawning == false) {
                         element.y += 30;
                     }
                 });
@@ -255,13 +257,13 @@ let gameManager = (() => {
             }
             else ticksSinceMovement--;
         }
-        if(currentEnemyCount != 0){
-            if(shotInternvalCounter == 0){
+        if (currentEnemyCount != 0) {
+            if (shotInternvalCounter == 0) {
                 let randomEnemies = gameObjects.filter((el) => {
                     return el.objectType == gameObjectEnums.enemy && el.dynamicValues?.isSpawning == false;
                 });
                 let randomEnemy = randomEnemies[[Math.floor(Math.random() * (randomEnemies.length - 1))]];
-                if(randomEnemy){
+                if (randomEnemy) {
                     gameObjects.push({
                         x: randomEnemy.x + gameObjectMetadata.enemy.width / 2,
                         y: randomEnemy.y + 10,
@@ -275,51 +277,52 @@ let gameManager = (() => {
             else shotInternvalCounter--;
         }
 
-        if(currentEnemyCount == 0 && shouldSpawn == false){
+        if (currentEnemyCount == 0 && shouldSpawn == false) {
             shotInternvalResetValue -= 10;
-            if(shotInternvalResetValue < 0){
+            if (shotInternvalResetValue < 0) {
                 shotInternvalResetValue = 0;
             }
             shouldSpawn = true;
             gameObjects.find((element) => element.objectType == gameObjectEnums.player).health = healthEnum.full;
         }
-        
-        if(currentEnemyCount > 18){
+
+        if (currentEnemyCount > 12) {
             shouldSpawn = false;
         }
+
     }
 
     window.addEventListener("keydown", (event) => {
-        if(event.key == "ArrowUp"){
+        if (event.key == "ArrowUp") {
             currentMovementCommand = "up";
             prevKey = event.key;
         }
-        else if(event.key == "ArrowLeft"){
+        else if (event.key == "ArrowLeft") {
             currentMovementCommand = "left";
             prevKey = event.key;
         }
-        else if(event.key == "ArrowRight"){
+        else if (event.key == "ArrowRight") {
             currentMovementCommand = "right";
             prevKey = event.key;
         }
-        else if(event.key == "ArrowDown"){
+        else if (event.key == "ArrowDown") {
             currentMovementCommand = "down";
             prevKey = event.key;
         }
-        if(event.code == "Space"){
+        if (event.code == "Space") {
             currentShotCommand = "shoot";
         }
     });
 
     window.addEventListener("keyup", (event) => {
-        if(event.key == "ArrowLeft" || event.key == "ArrowRight" || event.key == "ArrowDown" || event.key == "ArrowUp"){
-            if(prevKey == event.key)
+        if (event.key == "ArrowLeft" || event.key == "ArrowRight" || event.key == "ArrowDown" || event.key == "ArrowUp") {
+            if (prevKey == event.key)
                 currentMovementCommand = "NA";
-        } 
+        }
     });
 
     let gameLoop = () => {
-        if(currentShotCommand == "shoot"){
+        if (currentShotCommand == "shoot") {
             let playerObject = gameObjects.find((element) => {
                 return element.objectType == gameObjectEnums.player;
             });
@@ -335,46 +338,46 @@ let gameManager = (() => {
             shotAudio.play();
         }
         gameObjects.forEach((element) => {
-            if(element.objectType == gameObjectEnums.shot){
-                element.y -= 10  
+            if (element.objectType == gameObjectEnums.shot) {
+                element.y -= 10
             }
-            else if(element.objectType == gameObjectEnums.enemyShot){
+            else if (element.objectType == gameObjectEnums.enemyShot) {
                 element.y += 10;
             }
-            else if(element.objectType == gameObjectEnums.player){
-                if(currentMovementCommand == "up"){
+            else if (element.objectType == gameObjectEnums.player) {
+                if (currentMovementCommand == "up") {
                     element.y -= 10;
                 }
-                else if(currentMovementCommand == "left"){
+                else if (currentMovementCommand == "left") {
                     element.x -= 10;
                 }
-                else if(currentMovementCommand == "right"){
+                else if (currentMovementCommand == "right") {
                     element.x += 10;
                 }
-                else if(currentMovementCommand == "down"){
+                else if (currentMovementCommand == "down") {
                     element.y += 10;
-                }        
+                }
             }
         });
         gameObjects.forEach((element) => {
-            if(element.objectType == gameObjectEnums.enemy){
+            if (element.objectType == gameObjectEnums.enemy) {
                 let collideElements = gameObjects.filter((el) => {
                     return el.objectType == gameObjectEnums.shot &&
                         (el.y <= (element.y + gameObjectMetadata.enemy.height) && el.y >= element.y)
-                        && (el.x >= element.x && el.x <= (element.x + gameObjectMetadata.enemy.width));         
+                        && (el.x >= element.x && el.x <= (element.x + gameObjectMetadata.enemy.width));
                 });
-                if(collideElements){
+                if (collideElements) {
                     let elementsToRemove = [];
                     collideElements.forEach((col) => {
-                        if(col.objectType != gameObjectEnums.shot){
+                        if (col.objectType != gameObjectEnums.shot) {
                             return;
                         }
                         let deathAudio = new Audio("./media/audio/echosplosion.wav");
                         deathAudio.play();
-                        if(element.health == healthEnum.full){
+                        if (element.health == healthEnum.full) {
                             element.health = healthEnum.half;
                         }
-                        else if(element.health == healthEnum.half){
+                        else if (element.health == healthEnum.half) {
                             elementsToRemove.push(element);
                             currentEnemyCount--;
                             //numOfEnemiesOnBoard--;
@@ -383,53 +386,37 @@ let gameManager = (() => {
                         elementsToRemove.push(col);
                     });
                     gameObjects = gameObjects.filter((el) => {
-                        return !elementsToRemove.includes(el);  
+                        return !elementsToRemove.includes(el);
                     });
                 }
             }
         });
-
         enemiesHandler();
-
-        // if(shotInternvalCounter == 0){
-        //     let randomEnemy = gameObjects.filter((el) => {
-        //         return el.objectType == gameObjectEnums.enemy
-        //     })[Math.floor(Math.random() * (currentEnemyCount - 1))];
-        //     gameObjects.push({
-        //         x: randomEnemy.x + gameObjectMetadata.enemy.width / 2,
-        //         y: randomEnemy.y + 10,
-        //         objectType: gameObjectEnums.enemyShot,
-        //         health: "NA",
-        //         dynamicValues: null
-        //     });
-        //     shotInternvalCounter = 20;
-        // }
-        // else shotInternvalCounter--;
         let elementsToRemove = [];
         gameObjects.forEach((element) => {
-            if(element.objectType == gameObjectEnums.enemyShot){
-                if((element.y <= (gameObjects[0].y + gameObjectMetadata.player.height) && element.y >= gameObjects[0].y) && (element.x >= gameObjects[0].x && element.x <= (gameObjects[0].x + gameObjectMetadata.player.width))){
-                    if(gameObjects[0].health == healthEnum.full){
+            if (element.objectType == gameObjectEnums.enemyShot) {
+                if ((element.y <= (gameObjects[0].y + gameObjectMetadata.player.height) && element.y >= gameObjects[0].y) && (element.x >= gameObjects[0].x && element.x <= (gameObjects[0].x + gameObjectMetadata.player.width))) {
+                    if (gameObjects[0].health == healthEnum.full) {
                         gameObjects[0].health = healthEnum.half;
                     }
-                    else if(gameObjects[0].health == healthEnum.half){
+                    else if (gameObjects[0].health == healthEnum.half) {
                         gameObjects[0].health = healthEnum.dead;
                     }
                     elementsToRemove.push(element);
-                } 
+                }
             }
         });
         gameObjects = gameObjects.filter((element) => {
             return !elementsToRemove.includes(element);
         });
         let healthText = "100%";
-        if(gameObjects[0].health == healthEnum.half){
+        if (gameObjects[0].health == healthEnum.half) {
             healthText = "50%";
         }
-        else if(gameObjects[0].health == healthEnum.dead) {
+        else if (gameObjects[0].health == healthEnum.dead) {
             healthText = "0%";
         }
-        if(healthText == "0%"){
+        if (healthText == "0%") {
             alert("You are dead!");
         }
         else {
@@ -439,7 +426,7 @@ let gameManager = (() => {
             currentShotCommand = "NA";
             setTimeout(() => {
                 gameLoop();
-            }, 1000 / 30);    
+            }, 1000 / 30);
         }
     }
 
@@ -460,7 +447,7 @@ let gameManager = (() => {
             .then(() => {
                 setTimeout(() => {
                     gameLoop();
-                }, 1000 / 30);        
+                }, 1000 / 30);
             });
     }
 
