@@ -197,7 +197,7 @@ let gameManager = (() => {
     let isSpawning = false;
     let ySpawningPosition = 50;
     let xSpawningBoundery = CANVAS_WIDTH - 50;
-    let ticksSinceLastSpawn = 60;
+    let ticksSinceLastSpawn = 120;
     let numOfEnemiesPerRow = 6;
     let ticksSinceMovement = 0;
     let numOfEnemiesOnBoard = 0;
@@ -220,6 +220,7 @@ let gameManager = (() => {
                         if (element.objectType == gameObjectEnums.enemy && element.dynamicValues?.isSpawning == true) {
                             element.dynamicValues.isSpawning = false;
                             currentEnemyCount++;
+                            spawningEnemyCount--;
                         }
                     });
                     ticksSinceLastSpawn = 0;
@@ -236,27 +237,16 @@ let gameManager = (() => {
                             isSpawning: true
                         }
                     };
-                    spawningEnemyCount++;
                     gameObjects.push(enemy);
                 }
                 isSpawning = true;
-                ticksSinceLastSpawn = 60;
+                ticksSinceLastSpawn = 120;
             }
             else {
                 ticksSinceLastSpawn--;
             }
         }
-        if (currentEnemyCount != 0) {
-            if (ticksSinceMovement == 0) {
-                gameObjects.forEach((element) => {
-                    if (element.objectType == gameObjectEnums.enemy && element.dynamicValues?.isSpawning == false) {
-                        element.y += 30;
-                    }
-                });
-                ticksSinceMovement = 30;
-            }
-            else ticksSinceMovement--;
-        }
+
         if (currentEnemyCount != 0) {
             if (shotInternvalCounter == 0) {
                 let randomEnemies = gameObjects.filter((el) => {
@@ -277,16 +267,32 @@ let gameManager = (() => {
             else shotInternvalCounter--;
         }
 
+        if (currentEnemyCount != 0) {
+            if (ticksSinceMovement == 0) {
+                gameObjects.forEach((element) => {
+                    if (element.objectType == gameObjectEnums.enemy && element.dynamicValues?.isSpawning == false) {
+                        element.y += 30;
+                    }
+                });
+                if(shouldSpawn){
+                    ticksSinceMovement = 30;
+                }
+                else ticksSinceMovement = 90;
+            }
+            else ticksSinceMovement--;
+        }
+
         if (currentEnemyCount == 0 && shouldSpawn == false) {
-            shotInternvalResetValue -= 10;
-            if (shotInternvalResetValue < 0) {
-                shotInternvalResetValue = 0;
+            shotInternvalResetValue -= 5;
+            if (shotInternvalResetValue <= 0) {
+                shotInternvalResetValue = 5;
             }
             shouldSpawn = true;
             gameObjects.find((element) => element.objectType == gameObjectEnums.player).health = healthEnum.full;
+            ticksSinceMovement = 0;
         }
 
-        if (currentEnemyCount > 12) {
+        if (currentEnemyCount > 6) {
             shouldSpawn = false;
         }
 
