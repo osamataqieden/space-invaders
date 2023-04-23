@@ -201,6 +201,8 @@ let gameManager = (() => {
     let numOfEnemiesPerRow = 6;
     let ticksSinceMovement = 0;
     let numOfEnemiesOnBoard = 0;
+    let yBounry = CANVAS_HEIGHT - 200;
+    let stopMovement = false;
 
     let enemiesHandler = () => {
         if (shouldSpawn) {
@@ -269,15 +271,22 @@ let gameManager = (() => {
 
         if (currentEnemyCount != 0) {
             if (ticksSinceMovement == 0) {
-                gameObjects.forEach((element) => {
-                    if (element.objectType == gameObjectEnums.enemy && element.dynamicValues?.isSpawning == false) {
-                        element.y += 30;
+                if (stopMovement == false) {
+                    gameObjects.forEach((element) => {
+                        if (element.objectType == gameObjectEnums.enemy && element.dynamicValues?.isSpawning == false) {
+                            element.y += 30;
+                        }
+                    });
+                    if (shouldSpawn) {
+                        ticksSinceMovement = 30;
                     }
-                });
-                if(shouldSpawn){
-                    ticksSinceMovement = 30;
+                    else ticksSinceMovement = 90;
+                    let detectMaxY = gameObjects.find((element) => {
+                        return element.objectType == gameObjectEnums.enemy && ((element.y + 30) >= yBounry);
+                    });
+                    if(detectMaxY)
+                        stopMovement = true;
                 }
-                else ticksSinceMovement = 90;
             }
             else ticksSinceMovement--;
         }
@@ -290,6 +299,7 @@ let gameManager = (() => {
             shouldSpawn = true;
             gameObjects.find((element) => element.objectType == gameObjectEnums.player).health = healthEnum.full;
             ticksSinceMovement = 0;
+            stopMovement = false;
         }
 
         if (currentEnemyCount > 6) {
@@ -394,6 +404,13 @@ let gameManager = (() => {
                     gameObjects = gameObjects.filter((el) => {
                         return !elementsToRemove.includes(el);
                     });
+                }
+                let playerElement = gameObjects.find((el) => {
+                    return el.objectType == gameObjectEnums.player
+                });
+                if ((playerElement.y <= (element.y + gameObjectMetadata.enemy.height) && playerElement.y >= element.y)
+                    && (playerElement.x >= element.x && playerElement.x <= (element.x + gameObjectMetadata.enemy.width))) {
+                    playerElement.health = healthEnum.dead;
                 }
             }
         });
